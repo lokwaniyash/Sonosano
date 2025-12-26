@@ -12,3 +12,5 @@ scipy
 tinytag
 bs4
 matplotlib
+slskd-api
+python-dotenv

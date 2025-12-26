@@ -1,0 +1,5 @@
+- [ ] integrate slskd
+- [ ] remove music searching results
+- [ ] remove download list
+- [ ] remove settings
+- [ ] add users and authentication

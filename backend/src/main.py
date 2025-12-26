@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 import glob
 
-from core.soulseek_manager import SoulseekManager
+from core.slskd_manager import SlskcManager
 from core.library_service import LibraryService
 from core.metadata_service import MetadataService
 from core.romanization_service import RomanizationService
@@ -20,10 +20,10 @@ from core.config_utils import get_config_path, get_documents_folder
 
 import os
 import json
-import random
-import string
-from pynicotine.config import config as pynicotine_config
 from configparser import ConfigParser
+
+from dotenv import load_dotenv
+load_dotenv()
 
 def create_default_config_if_not_exists():
     """Create a default config file if one doesn't exist."""
@@ -56,53 +56,11 @@ else:
 
 data_path = load_data_path()
 if data_path is None:
-    # This fallback is now less likely to be used, but kept for safety.
     documents_folder = get_documents_folder()
     data_path = os.path.join(documents_folder, "Sonosano_Songs")
     os.makedirs(data_path, exist_ok=True)
 
-config_file_path = os.path.join(data_path, "config.ini")
-misc_file_path = os.path.join(data_path, "misc.json")
-
 logging.info(f"Using data folder at: {data_path}")
-logging.info(f"Pynicotine config file: {config_file_path}")
-logging.info(f"Misc config file (for credentials): {misc_file_path}")
-
-pynicotine_config.set_data_folder(data_path)
-pynicotine_config.set_config_file(config_file_path)
-
-def generate_random_credentials():
-    characters = string.ascii_letters + string.digits
-    username = ''.join(random.choice(characters) for _ in range(8))
-    password = ''.join(random.choice(characters) for _ in range(8))
-    return username, password
-
-def load_or_create_misc_config():
-    if os.path.exists(misc_file_path) and os.path.getsize(misc_file_path) > 0:
-        try:
-            with open(misc_file_path, 'r', encoding='utf-8') as f:
-                misc_config = json.load(f)
-                if 'credentials' in misc_config and misc_config['credentials'].get('username') and misc_config['credentials'].get('password'):
-                    return misc_config
-        except Exception as e:
-            logging.error(f"Error loading misc.json: {e}, creating new one...")
-    username, password = generate_random_credentials()
-    misc_config = {'credentials': {'username': username, 'password': password}}
-    try:
-        os.makedirs(data_path, exist_ok=True)
-        with open(misc_file_path, 'w', encoding='utf-8') as f:
-            json.dump(misc_config, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        logging.error(f"Error saving misc.json: {e}")
-    return misc_config
-
-misc_config = load_or_create_misc_config()
-pynicotine_config.sections["server"]["login"] = misc_config['credentials']['username']
-pynicotine_config.sections["server"]["passw"] = misc_config['credentials']['password']
-pynicotine_config.load_config(isolated_mode=True)
-pynicotine_config.sections["server"]["login"] = misc_config['credentials']['username']
-pynicotine_config.sections["server"]["passw"] = misc_config['credentials']['password']
-pynicotine_config.write_configuration()
 
 app = FastAPI(title="Sonosano API", version="1.0.0")
 
@@ -118,16 +76,16 @@ metadata_service = MetadataService(data_path)
 library_service = LibraryService(metadata_service, data_path)
 romanization_service = RomanizationService()
 song_processor = SongProcessor(library_service, metadata_service, romanization_service, data_path)
-soulseek_manager = SoulseekManager(library_service, data_path)
+slskd_manager = SlskcManager(library_service, data_path)
 playlist_service = PlaylistService(data_path)
 
-search_routes.soulseek_manager = soulseek_manager
-download_routes.soulseek_manager = soulseek_manager
+search_routes.slskd_manager = slskd_manager
+download_routes.slskd_manager = slskd_manager
 library_routes.library_service = library_service
 playlist_routes.library_service = library_service
 playlist_routes.playlist_service = playlist_service
 library_routes.song_processor = song_processor
-system_routes.soulseek_manager = soulseek_manager
+system_routes.slskd_manager = slskd_manager
 system_routes.romanization_service = romanization_service
 system_routes.data_path = data_path
 
@@ -149,26 +107,24 @@ from watchdog.observers import Observer
 from core.file_watcher import MusicFileHandler
 
 def long_running_startup_tasks():
-    soulseek_manager.initialize_soulseek()
-    event_thread = threading.Thread(target=soulseek_manager.process_events, daemon=True)
-    event_thread.start()
-
+    slskd_manager.initialize_slskd()
+    
     def initial_sync():
         logging.info("Waiting for Soulseek login before initial sync...")
-        if not soulseek_manager.login_event.wait(timeout=60):
+        if not slskd_manager.wait_for_login(timeout=60):
             logging.warning("Soulseek login timed out. Initial sync may be incomplete.")
             return
             
         logging.info("=== Starting initial library sync and processing ===")
         all_songs_in_db = {s['path'] for s in library_service.get_all_songs()}
-        music_directory = pynicotine_config.sections["transfers"]["downloaddir"]
-        logging.info(f"Scanning music directory for sync: {music_directory}")
+        download_dir = os.path.join(data_path, "downloads")
+        logging.info(f"Scanning music directory for sync: {download_dir}")
         
         fs_files = set()
         for ext in {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma', '.opus'}:
             # Use relative paths for comparison
-            for file_path in glob.glob(os.path.join(music_directory, f"**/*{ext}"), recursive=True):
-                fs_files.add(os.path.relpath(file_path, music_directory))
+            for file_path in glob.glob(os.path.join(download_dir, f"**/*{ext}"), recursive=True):
+                fs_files.add(os.path.relpath(file_path, download_dir))
 
         new_files = fs_files - all_songs_in_db
         deleted_files = all_songs_in_db - fs_files
@@ -182,7 +138,7 @@ def long_running_startup_tasks():
         for file_path in new_files:
             if file_path not in song_processor._currently_processing:
                 # Reconstruct the absolute path for the song processor
-                abs_path = os.path.join(music_directory, file_path)
+                abs_path = os.path.join(download_dir, file_path)
                 song_processor.process_new_song(abs_path)
         logging.info("=== Initial library sync and processing finished. ===")
 
@@ -190,10 +146,11 @@ def long_running_startup_tasks():
     sync_thread.start()
 
     def start_watcher():
-        music_directory = pynicotine_config.sections["transfers"]["downloaddir"]
-        event_handler = MusicFileHandler(library_service, song_processor, music_directory)
+        download_dir = os.path.join(data_path, "downloads")
+        os.makedirs(download_dir, exist_ok=True)
+        event_handler = MusicFileHandler(library_service, song_processor, download_dir)
         observer = Observer()
-        observer.schedule(event_handler, music_directory, recursive=True)
+        observer.schedule(event_handler, download_dir, recursive=True)
         observer.start()
         try:
             while True: time.sleep(1)

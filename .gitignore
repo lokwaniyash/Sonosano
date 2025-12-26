@@ -4,6 +4,7 @@ out
 .DS_Store
 *.log*
 temp
+.env
 
 # Python
 

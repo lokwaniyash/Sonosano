@@ -4,7 +4,6 @@ from models.library_models import AddFileRequest, ShowInExplorerRequest, StoreMe
 from core.library_service import LibraryService
 from core.song_processor import SongProcessor
 from core.forensic_visualizer import analyze_audio_for_visualization, create_visual_report
-from pynicotine.config import config
 import os
 import shutil
 import glob
@@ -29,18 +28,14 @@ async def get_lyrics(filePath: str = FastQuery(...)):
     """Get lyrics for a specific song from the local cache."""
     logging.info(f"Received request for lyrics for file path: {filePath}")
     
-    # Use the absolute path from the song processor to query the lyrics table
-    music_directory = config.sections["transfers"]["downloaddir"]
-    absolute_path = os.path.join(music_directory, filePath)
-    
     Lyrics = TinyDBQuery()
-    lyrics_data = library_service.lyrics_table.get(Lyrics.file_path == absolute_path)
+    lyrics_data = library_service.lyrics_table.get(Lyrics.file_path == filePath)
     
     if not lyrics_data:
-        logging.info(f"Lyrics not found in local cache for: {absolute_path}")
+        logging.info(f"Lyrics not found in local cache for: {filePath}")
         raise HTTPException(status_code=404, detail="Lyrics not found in local cache.")
     
-    logging.info(f"Found lyrics in local cache for: {absolute_path}")
+    logging.info(f"Found lyrics in local cache for: {filePath}")
     return lyrics_data
 
 @router.post("/library/sync")
@@ -48,10 +43,10 @@ async def sync_library():
     """Synchronize the library with the file system."""
     db_files = {song['path'] for song in library_service.get_all_songs()}
     
-    music_directory = config.sections["transfers"]["downloaddir"]
+    download_dir = os.path.join(song_processor.data_path, "downloads")
     fs_files = set()
     for ext in {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma', '.opus'}:
-        fs_files.update(glob.glob(os.path.join(music_directory, f"**/*{ext}"), recursive=True))
+        fs_files.update(glob.glob(os.path.join(download_dir, f"**/*{ext}"), recursive=True))
 
     new_files = fs_files - db_files
     deleted_files = db_files - fs_files

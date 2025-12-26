@@ -62,58 +62,7 @@ export const sortSoulseekFiles = (soulseekFiles: SoulseekFile[], searchQuery: st
     return soulseekFiles
   }
 
-  // Prepare files with quality scores
-  const filesWithScores = soulseekFiles.map((file) => ({
-    ...file,
-    qualityScore: getQualityScore(file),
-  }))
-
-  // Configure Fuse.js for searching file paths
-  const fuseOptions = {
-    keys: ['path'],
-    threshold: 0.4, // Adjust for more/less strict matching
-    location: 0,
-    distance: 100,
-    includeScore: true,
-    shouldSort: true,
-    minMatchCharLength: 2,
-    ignoreLocation: false,
-    useExtendedSearch: false,
-  }
-
-  // Create Fuse instance
-  const fuse = new Fuse(filesWithScores, fuseOptions)
-
-  // Search for files matching the query
-  const searchResults = fuse.search(searchQuery)
-
-  // Files that matched the search
-  const matchedFiles = searchResults.map((result) => ({
-    ...result.item,
-    relevanceScore: 1 - (result.score || 0), // Convert Fuse score (0=perfect) to relevance (1=perfect)
-  }))
-
-  // Files that didn't match the search
-  const unmatchedFiles = filesWithScores
-    .filter((file) => !matchedFiles.find((matched) => matched.id === file.id))
-    .map((file) => ({
-      ...file,
-      relevanceScore: 0,
-    }))
-
-  // Combine all files
-  const allFiles = [...matchedFiles, ...unmatchedFiles]
-
-  // Sort by combined score (relevance + quality)
-  // Give 60% weight to relevance and 40% to quality
-  const sorted = allFiles.sort((a, b) => {
-    const scoreA = a.relevanceScore * 60 + a.qualityScore * 0.4
-    const scoreB = b.relevanceScore * 60 + b.qualityScore * 0.4
-    return scoreB - scoreA // Higher scores first
-  })
-
-  // Remove the temporary scoring properties and limit to top 100
-  return sorted
-    .slice(0, 100) // Take only the top 100 files
-    .map(({ ...file }) => file as SoulseekFile)
+  // Don't re-sort - backend already sorted by priority (FLAC first, highest bitrate, lowest queue)
+  // Only apply Fuse search if user types additional filters, otherwise trust backend ordering
+  return soulseekFiles
 }

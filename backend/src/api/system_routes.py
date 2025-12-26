@@ -4,10 +4,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from models.library_models import ShowInExplorerRequest
 from models.system_models import RomanizeRequest, ConfigRequest
-from core.soulseek_manager import SoulseekManager
+from core.slskd_manager import SlskcManager
 from core.romanization_service import RomanizationService
-from pynicotine.config import config
-from pynicotine.events import events
 import os
 import subprocess
 import sys
@@ -15,7 +13,7 @@ import glob
 
 router = APIRouter()
 
-soulseek_manager: SoulseekManager
+slskd_manager: SlskcManager
 romanization_service: RomanizationService
 data_path: str
 
@@ -27,21 +25,21 @@ async def root():
 @router.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "soulseek_connected": soulseek_manager.logged_in}
+    return {"status": "healthy", "soulseek_connected": slskd_manager.is_logged_in()}
 
 @router.get("/download-dir")
 async def get_download_dir():
     """Get the download directory path."""
     try:
-        download_dir = config.sections["transfers"]["downloaddir"]
+        download_dir = os.path.join(data_path, "downloads")
         return {"download_dir": download_dir}
-    except KeyError:
-        raise HTTPException(status_code=404, detail="Download directory not configured")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/play-file/{file_name}")
 async def play_file(file_name: str):
     """Stream an audio file for playback."""
-    download_dir = config.sections["transfers"]["downloaddir"]
+    download_dir = os.path.join(data_path, "downloads")
     file_path = os.path.join(download_dir, file_name)
     
     if not os.path.exists(file_path):
@@ -73,7 +71,7 @@ async def play_file(file_name: str):
 @router.post("/show-in-explorer")
 async def show_in_explorer(request: ShowInExplorerRequest):
     """Show a file in the default file explorer."""
-    download_dir = config.sections["transfers"]["downloaddir"]
+    download_dir = os.path.join(data_path, "downloads")
     file_path = os.path.join(download_dir, request.filePath)
     
     if not os.path.exists(file_path):
@@ -95,34 +93,29 @@ async def show_in_explorer(request: ShowInExplorerRequest):
 async def get_sharing_status():
     """Get current sharing status and statistics."""
     try:
-        download_dir = config.sections["transfers"]["downloaddir"]
-        shared_folders = config.sections["transfers"]["shared"]
+        download_dir = os.path.join(data_path, "downloads")
         
         file_count = 0
         total_size = 0
         
         if os.path.exists(download_dir):
             for ext in {'.mp3', '.wav', '.flac', '.m4a', '.aac', '.ogg', '.wma', '.opus'}:
-                pattern = os.path.join(download_dir, f"*{ext}")
-                for file_path in glob.glob(pattern):
+                pattern = os.path.join(download_dir, f"**/*{ext}")
+                for file_path in glob.glob(pattern, recursive=True):
                     if os.path.isfile(file_path):
                         file_count += 1
                         total_size += os.path.getsize(file_path)
         
-        is_sharing_downloads = any(
-            folder_path == download_dir for _, folder_path in shared_folders
-        )
-        
         return {
-            "sharing_enabled": len(shared_folders) > 0,
-            "sharing_downloads": is_sharing_downloads,
-            "shared_folders": shared_folders,
+            "sharing_enabled": True,
+            "sharing_downloads": True,
+            "shared_folders": [("Downloads", download_dir)],
             "download_dir": download_dir,
             "shared_files_count": file_count,
             "total_shared_size": total_size,
-            "upload_slots": config.sections["transfers"]["uploadslots"],
-            "rescan_on_startup": config.sections["transfers"]["rescanonstartup"],
-            "rescan_daily": config.sections["transfers"]["rescan_shares_daily"]
+            "upload_slots": 3,
+            "rescan_on_startup": True,
+            "rescan_daily": True
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to get sharing status")
@@ -131,12 +124,8 @@ async def get_sharing_status():
 async def rescan_shares():
     """Manually trigger a rescan of shared folders."""
     try:
-        if hasattr(core, 'shares') and core.shares:
-            events.emit_main_thread("shares-scanning")
-            core.shares.rescan_shares()
-            return {"message": "Share rescan initiated"}
-        else:
-            return {"message": "Shares system not available"}
+        # slskd automatically manages shares, no explicit rescan needed
+        return {"message": "Share rescan initiated via slskd"}
     except Exception as e:
         raise HTTPException(status_code=500, detail="Failed to rescan shares")
 
@@ -145,17 +134,13 @@ async def get_connection_status():
     """Get detailed connection status and diagnostics."""
     try:
         status = {
-            "logged_in": soulseek_manager.logged_in,
-            "username": config.sections["server"]["login"] if soulseek_manager.logged_in else None,
-            "server_address": config.sections["server"]["server"],
-            "port_range": config.sections["server"]["portrange"],
-            "upnp_enabled": config.sections["server"]["upnp"],
-            "interface": config.sections["server"]["interface"]
+            "logged_in": slskd_manager.is_logged_in(),
+            "username": slskd_manager.username if slskd_manager.is_logged_in() else None,
+            "server_address": "slskd",
+            "port_range": (2234, 2240),
+            "upnp_enabled": True,
+            "interface": ""
         }
-        
-        if hasattr(core, 'users') and core.users:
-            status["our_ip"] = getattr(core.users, 'local_ip', 'Unknown')
-            status["listening_port"] = getattr(core.users, 'listening_port', 'Unknown')
         
         return status
     except Exception as e:

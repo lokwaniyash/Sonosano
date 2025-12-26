@@ -6,7 +6,6 @@ import threading
 from typing import List, Dict, Any
 from tinydb import TinyDB, Query
 from .metadata_service import MetadataService
-from pynicotine.config import config
 from models.playlist_models import Playlist
 from datetime import datetime
 import logging
