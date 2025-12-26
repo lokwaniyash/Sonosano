@@ -1,17 +1,21 @@
 # Sonosano Backend Migration: Pynicotine → Slskd API
 
 ## Summary
+
 The Sonosano backend has been successfully migrated from using **Pynicotine** (Nicotine+ fork) to **slskd-api** for Soulseek network integration.
 
 ## Changes Made
 
 ### 1. **Dependencies Updated** (`requirements.txt`)
+
 - **Added**: `slskd-api` - Python wrapper for the slskd server API
 - **Added**: `python-dotenv` - For environment variable management
 - **Removed**: Implicit pynicotine dependency
 
 ### 2. **New Manager Created** (`core/slskd_manager.py`)
+
 Replaced the old `SoulseekManager` with a new `SlskcManager` that uses slskd-api:
+
 - Initializes and connects to slskd server
 - Manages search operations with background polling
 - Handles downloads with progress monitoring
@@ -19,6 +23,7 @@ Replaced the old `SoulseekManager` with a new `SlskcManager` that uses slskd-api
 - Thread-safe operations with daemon threads
 
 **Key Features:**
+
 - Uses `SlskdClient` from `slskd_api` library
 - Reads credentials from `.env` file (USERNAME, PASSWORD, APIKEY)
 - Configurable slskd URL via `SLSKD_URL` env var (defaults to `http://localhost:5030`)
@@ -27,24 +32,28 @@ Replaced the old `SoulseekManager` with a new `SlskcManager` that uses slskd-api
 ### 3. **API Routes Updated**
 
 #### `api/search_routes.py`
+
 - Removed pynicotine event processing
 - Updated to use `SlskcManager.perform_search()`
 - Simplified search result handling
 - Updated connection status checks
 
 #### `api/download_routes.py`
+
 - Removed pynicotine core transfers management
 - Updated to use `SlskcManager.download_file()`
 - Simplified download status reporting
 - Updated cancellation logic for slskd API
 
 #### `api/system_routes.py`
+
 - Removed all pynicotine configuration references
 - Simplified sharing status endpoint
 - Updated connection diagnostics
 - Downloads now always point to `{data_path}/downloads`
 
 ### 4. **Main Application Updated** (`main.py`)
+
 - Removed pynicotine config initialization
 - Removed misc.json credential management (now handled by .env)
 - Replaced `SoulseekManager` with `SlskcManager`
@@ -53,15 +62,18 @@ Replaced the old `SoulseekManager` with a new `SlskcManager` that uses slskd-api
 - Updated path references for downloads directory
 
 ### 5. **Library Service Updated** (`core/library_service.py`)
+
 - Removed pynicotine config import
 
 ### 6. **Files Removed**
+
 - `backend/src/pynicotine/` directory (entire folder deleted)
 - `core/soulseek_manager.py` (replaced with slskd_manager.py)
 
 ## Environment Configuration
 
 Update your `.env` file with:
+
 ```env
 USERNAME=your_soulseek_username
 PASSWORD=your_soulseek_password
@@ -72,6 +84,7 @@ SLSKD_URL=http://localhost:5030
 ## Architecture Changes
 
 ### Old Flow (Pynicotine):
+
 ```
 Sonosano ← → Pynicotine Core (embedded Soulseek client)
             ↓
@@ -79,6 +92,7 @@ Sonosano ← → Pynicotine Core (embedded Soulseek client)
 ```
 
 ### New Flow (Slskd):
+
 ```
 Sonosano ← → Slskd Server API (HTTP)
             ↓
@@ -104,6 +118,7 @@ Sonosano ← → Slskd Server API (HTTP)
 ## Testing
 
 To verify the migration:
+
 ```bash
 cd backend/src
 python -c "from core.slskd_manager import SlskcManager; print('SlskcManager import successful')"

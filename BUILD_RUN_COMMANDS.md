@@ -1,6 +1,7 @@
 # Sonosano - Build & Run Commands
 
 ## Table of Contents
+
 1. [Development Setup](#development-setup)
 2. [Running the Backend](#running-the-backend)
 3. [Running the Frontend](#running-the-frontend)
@@ -290,6 +291,7 @@ def perform_search(self, artist, song, raw_query):
 ```
 
 ### Then run:
+
 ```bash
 cd backend/src
 python main.py
@@ -298,6 +300,7 @@ python main.py
 ### Debug with VSCode
 
 1. Create `.vscode/launch.json`:
+
 ```json
 {
   "version": "0.2.0",
@@ -513,21 +516,21 @@ npm run build
 
 ### Backend (.env file)
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `USERNAME` | Soulseek username | `sonosano_user` |
-| `PASSWORD` | Soulseek password | `mypassword123` |
-| `APIKEY` | slskd API key | `abc123def456...` |
-| `SLSKD_URL` | slskd server URL | `http://localhost:5030` |
+| Variable    | Description       | Example                 |
+| ----------- | ----------------- | ----------------------- |
+| `USERNAME`  | Soulseek username | `sonosano_user`         |
+| `PASSWORD`  | Soulseek password | `mypassword123`         |
+| `APIKEY`    | slskd API key     | `abc123def456...`       |
+| `SLSKD_URL` | slskd server URL  | `http://localhost:5030` |
 
 ### Application Paths
 
-| Path | Purpose |
-|------|---------|
-| `{Documents}/Sonosano_Songs/` | Root data directory |
-| `{Documents}/Sonosano_Songs/downloads/` | Downloaded music files |
-| `{Documents}/Sonosano_Songs/covers/` | Album cover cache |
-| `{Documents}/Sonosano_Songs/library.db` | Song metadata database |
+| Path                                    | Purpose                   |
+| --------------------------------------- | ------------------------- |
+| `{Documents}/Sonosano_Songs/`           | Root data directory       |
+| `{Documents}/Sonosano_Songs/downloads/` | Downloaded music files    |
+| `{Documents}/Sonosano_Songs/covers/`    | Album cover cache         |
+| `{Documents}/Sonosano_Songs/library.db` | Song metadata database    |
 | `{Documents}/Sonosano_Songs/config.ini` | Application configuration |
 
 ---

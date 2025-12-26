@@ -70,68 +70,78 @@ SlskcManager (core/slskd_manager.py)
 ## API Endpoint Map
 
 ### Search Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/search/soulseek` | Start a search, returns token |
-| GET | `/search/soulseek/results/{token}` | Get accumulated results |
-| GET | `/search` | Generic search across providers |
+
+| Method | Endpoint                           | Purpose                         |
+| ------ | ---------------------------------- | ------------------------------- |
+| POST   | `/search/soulseek`                 | Start a search, returns token   |
+| GET    | `/search/soulseek/results/{token}` | Get accumulated results         |
+| GET    | `/search`                          | Generic search across providers |
 
 ### Download Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| POST | `/download` | Start a download |
-| GET | `/download-status/{user}/{path}` | Get download progress |
-| GET | `/downloads/status` | Get all downloads + system status |
-| POST | `/download/cancel/{id}` | Cancel a download |
+
+| Method | Endpoint                         | Purpose                           |
+| ------ | -------------------------------- | --------------------------------- |
+| POST   | `/download`                      | Start a download                  |
+| GET    | `/download-status/{user}/{path}` | Get download progress             |
+| GET    | `/downloads/status`              | Get all downloads + system status |
+| POST   | `/download/cancel/{id}`          | Cancel a download                 |
 
 ### System Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/health` | Health check |
-| GET | `/connection/status` | Soulseek connection status |
-| GET | `/download-dir` | Get download directory path |
-| GET | `/play-file/{filename}` | Stream audio file |
-| POST | `/show-in-explorer` | Open file in explorer |
-| GET | `/sharing/status` | Sharing statistics |
-| POST | `/sharing/rescan` | Rescan shared folders |
+
+| Method | Endpoint                | Purpose                     |
+| ------ | ----------------------- | --------------------------- |
+| GET    | `/health`               | Health check                |
+| GET    | `/connection/status`    | Soulseek connection status  |
+| GET    | `/download-dir`         | Get download directory path |
+| GET    | `/play-file/{filename}` | Stream audio file           |
+| POST   | `/show-in-explorer`     | Open file in explorer       |
+| GET    | `/sharing/status`       | Sharing statistics          |
+| POST   | `/sharing/rescan`       | Rescan shared folders       |
 
 ### Library Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/library/songs` | Get all library songs |
-| GET | `/library/lyrics` | Get cached lyrics |
-| POST | `/library/sync` | Sync with file system |
+
+| Method | Endpoint          | Purpose               |
+| ------ | ----------------- | --------------------- |
+| GET    | `/library/songs`  | Get all library songs |
+| GET    | `/library/lyrics` | Get cached lyrics     |
+| POST   | `/library/sync`   | Sync with file system |
 
 ### Configuration Endpoints
-| Method | Endpoint | Purpose |
-|--------|----------|---------|
-| GET | `/config` | Get app config |
-| POST | `/config` | Update app config |
-| POST | `/romanize` | Romanize text |
+
+| Method | Endpoint    | Purpose           |
+| ------ | ----------- | ----------------- |
+| GET    | `/config`   | Get app config    |
+| POST   | `/config`   | Update app config |
+| POST   | `/romanize` | Romanize text     |
 
 ---
 
 ## Development Workflow
 
 ### Start Backend Development
+
 ```bash
 cd backend/src
 python -m uvicorn main:app --reload
 ```
+
 - Listens on `http://localhost:8000`
 - Auto-reloads on file changes
 - Requires `.env` with credentials
 - Requires slskd running on `http://localhost:5030`
 
 ### Start Frontend Development
+
 ```bash
 npm run dev
 ```
+
 - Launches Electron app
 - Hot reload enabled
 - Connects to backend at `http://localhost:8000`
 
 ### Check Status
+
 ```bash
 curl http://localhost:8000/health
 # Returns: {"status":"healthy","soulseek_connected":true}
@@ -142,6 +152,7 @@ curl http://localhost:8000/health
 ## Data Flow Examples
 
 ### Search Flow Diagram
+
 ```
 Frontend
    ↓
@@ -168,6 +179,7 @@ Background thread updates results (runs up to 30 seconds)
 ```
 
 ### Download Flow Diagram
+
 ```
 Frontend
    ↓
@@ -199,26 +211,31 @@ Background thread monitors and updates status (up to 5 minutes)
 ## Common Code Locations
 
 ### To add a new Search feature:
+
 - Edit: `backend/src/api/search_routes.py` (add endpoint)
 - Uses: `core/slskd_manager.py` (perform_search, get_search_results)
 - Models: `models/search_models.py` (SearchQuery, SearchResult)
 
 ### To add a new Download feature:
+
 - Edit: `backend/src/api/download_routes.py` (add endpoint)
 - Uses: `core/slskd_manager.py` (download_file, get_download_status)
 - Models: `models/download_models.py` (DownloadRequest, DownloadStatus)
 
 ### To add a new System/Config feature:
+
 - Edit: `backend/src/api/system_routes.py` (add endpoint)
 - Uses: `core/slskd_manager.py` (if Soulseek-related)
 - Models: `models/system_models.py` (status models)
 
 ### To modify slskd integration:
+
 - Edit: `backend/src/core/slskd_manager.py` (SlskcManager class)
 - Related: `main.py` (initialization)
 - Related: `.env` (credentials and URL)
 
 ### To add Library/Metadata features:
+
 - Edit: `backend/src/core/library_service.py`
 - Or: `backend/src/core/metadata_service.py`
 - Or: `backend/src/api/library_routes.py` (endpoints)
@@ -228,6 +245,7 @@ Background thread monitors and updates status (up to 5 minutes)
 ## Environment Setup Quick Reference
 
 ### .env Template
+
 ```
 USERNAME=your_soulseek_username
 PASSWORD=your_soulseek_password
@@ -236,6 +254,7 @@ SLSKD_URL=http://localhost:5030
 ```
 
 ### Directory Structure
+
 ```
 {Documents}/Sonosano_Songs/
 ├── downloads/          # Downloaded music files

@@ -1,6 +1,7 @@
 # Sonosano Backend - Class & Method Reference
 
 ## Table of Contents
+
 1. [SlskcManager](#slskcmanager)
 2. [Search Routes](#search-routes)
 3. [Download Routes](#download-routes)
@@ -17,9 +18,11 @@
 **Purpose:** Core manager class that handles all Soulseek network operations via slskd API.
 
 ### Constructor
+
 ```python
 __init__(self, library_service, data_path: str)
 ```
+
 - **Parameters:**
   - `library_service`: LibraryService instance for metadata management
   - `data_path`: Root data directory path
@@ -31,6 +34,7 @@ __init__(self, library_service, data_path: str)
 ### Public Methods
 
 #### `initialize_slskd()`
+
 - **Purpose:** Initialize and authenticate with slskd server
 - **Returns:** None
 - **Side Effects:** Sets `logged_in` flag, triggers login event
@@ -38,6 +42,7 @@ __init__(self, library_service, data_path: str)
 - **Exception Handling:** Logs errors but doesn't raise
 
 #### `perform_search(artist: Optional[str], song: Optional[str], raw_query: str) -> tuple[int, str]`
+
 - **Purpose:** Initiate a search on the Soulseek network
 - **Parameters:**
   - `artist`: Artist name (optional)
@@ -52,6 +57,7 @@ __init__(self, library_service, data_path: str)
 - **Use Case:** Called from `/search/soulseek` endpoint
 
 #### `get_search_results(token: int) -> List[Dict[str, Any]]`
+
 - **Purpose:** Retrieve accumulated search results for a token
 - **Parameters:**
   - `token`: Search token returned by `perform_search()`
@@ -59,6 +65,7 @@ __init__(self, library_service, data_path: str)
 - **Use Case:** Called from `/search/soulseek/results/{token}` endpoint
 
 #### `download_file(username: str, file_path: str, size: int, metadata: Optional[Dict] = None) -> str`
+
 - **Purpose:** Initiate a file download from a user
 - **Parameters:**
   - `username`: Username of file owner
@@ -74,6 +81,7 @@ __init__(self, library_service, data_path: str)
 - **Use Case:** Called from `/download` endpoint
 
 #### `get_download_status(username: str, file_path: str) -> Dict[str, Any]`
+
 - **Purpose:** Get current progress of a download
 - **Parameters:**
   - `username`: Username of file owner
@@ -88,11 +96,13 @@ __init__(self, library_service, data_path: str)
 - **Use Case:** Called from `/download-status/{username}/{file_path}` endpoint
 
 #### `is_logged_in() -> bool`
+
 - **Purpose:** Check if currently connected to Soulseek
 - **Returns:** Boolean indicating logged-in status
 - **Use Case:** Called by route handlers to validate connection
 
 #### `wait_for_login(timeout: int = 30) -> bool`
+
 - **Purpose:** Block until login completes or timeout
 - **Parameters:**
   - `timeout`: Seconds to wait (default: 30)
@@ -102,11 +112,13 @@ __init__(self, library_service, data_path: str)
 ### Private Methods
 
 #### `_initialize_client()`
+
 - **Purpose:** Create SlskdClient connection
 - **Logs errors** but doesn't raise exceptions
 - **Called From:** Constructor and `initialize_slskd()`
 
 #### `_login_to_slskd()`
+
 - **Purpose:** Authenticate with slskd server
 - **Flow:**
   1. Checks server status
@@ -116,11 +128,13 @@ __init__(self, library_service, data_path: str)
 - **Raises:** Exception if connection times out
 
 #### `setup_slskd_config()`
+
 - **Purpose:** Configure slskd settings (download directory, etc.)
 - **Creates:** Downloads folder at `{data_path}/downloads` if missing
 - **Catches exceptions** but logs warnings instead of raising
 
 #### `_poll_search_results(token: int, search_id: Optional[str])`
+
 - **Purpose:** Background thread that polls for search results
 - **Parameters:**
   - `token`: Search token
@@ -133,6 +147,7 @@ __init__(self, library_service, data_path: str)
 - **Called From:** `perform_search()`
 
 #### `_monitor_download(download_id: str, username: str, file_path: str)`
+
 - **Purpose:** Background thread monitoring download progress
 - **Flow:**
   1. Runs in daemon thread
@@ -143,6 +158,7 @@ __init__(self, library_service, data_path: str)
 - **Called From:** `download_file()`
 
 #### `_extract_extension(path: str) -> str`
+
 - **Purpose:** Extract file extension from path
 - **Parameters:**
   - `path`: File path string
@@ -152,20 +168,24 @@ __init__(self, library_service, data_path: str)
 ### Data Structures
 
 #### `search_results: defaultdict(list)`
+
 - **Key:** Search token (int)
 - **Value:** List of file dictionaries
 - **File Dictionary Keys:** 'path', 'size', 'extension', 'username', 'bitrate', 'quality', 'length'
 
 #### `download_status: dict`
+
 - **Key:** Download ID (str) - format: "username:filepath"
 - **Value:** Status dictionary (see `get_download_status()` returns)
 
 #### `active_downloads: dict`
+
 - **Key:** Download ID (str)
 - **Value:** Download info dictionary with keys:
   - 'id', 'file_name', 'file_path', 'username', 'size', 'metadata', 'timestamp'
 
 #### `search_tokens: dict`
+
 - **Key:** Search token (int)
 - **Value:** Search query string (artist + song or raw query)
 
@@ -180,6 +200,7 @@ __init__(self, library_service, data_path: str)
 ### Endpoints
 
 #### `GET /search`
+
 - **Purpose:** Generic search across multiple providers
 - **Query Parameters:**
   - `provider` (str): Which provider to search ('musicbrainz', 'spotify', etc.)
@@ -191,6 +212,7 @@ __init__(self, library_service, data_path: str)
   - 500: Provider error
 
 #### `POST /search/soulseek`
+
 - **Purpose:** Search Soulseek network for audio files
 - **Request Body:** SearchQuery model
   ```json
@@ -200,7 +222,7 @@ __init__(self, library_service, data_path: str)
     "query": "The Beatles Let It Be"
   }
   ```
-- **Returns:** 
+- **Returns:**
   ```json
   {
     "search_token": 1,
@@ -217,6 +239,7 @@ __init__(self, library_service, data_path: str)
   3. Returns token for polling results
 
 #### `GET /search/soulseek/results/{token}`
+
 - **Purpose:** Fetch accumulated search results
 - **Path Parameters:**
   - `token` (int): Token from previous search
@@ -254,6 +277,7 @@ __init__(self, library_service, data_path: str)
 ### Endpoints
 
 #### `POST /download`
+
 - **Purpose:** Initiate a file download
 - **Request Body:** DownloadRequest model
   ```json
@@ -285,6 +309,7 @@ __init__(self, library_service, data_path: str)
   3. Returns download ID for status polling
 
 #### `GET /download-status/{username}/{file_path}`
+
 - **Purpose:** Get status of a specific download
 - **Path Parameters:**
   - `username` (str): Username of file owner
@@ -304,6 +329,7 @@ __init__(self, library_service, data_path: str)
 - **Statuses:** 'Queued', 'Downloading', 'Finished', 'Failed', 'Cancelled'
 
 #### `GET /downloads/status`
+
 - **Purpose:** Get status of all active downloads + system status
 - **Returns:** DownloadsAndStatusResponse model
   ```json
@@ -333,6 +359,7 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `POST /download/cancel/{download_id}`
+
 - **Purpose:** Cancel an active download
 - **Path Parameters:**
   - `download_id` (str): Download ID (URL-encoded)
@@ -359,12 +386,14 @@ __init__(self, library_service, data_path: str)
 ### Endpoints
 
 #### `GET /`
+
 - **Purpose:** Root endpoint
 - **Returns:** `{"message": "Sonosano API is running"}`
 
 #### `GET /health`
+
 - **Purpose:** Health check
-- **Returns:** 
+- **Returns:**
   ```json
   {
     "status": "healthy",
@@ -373,10 +402,12 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `GET /download-dir`
+
 - **Purpose:** Get configured download directory path
 - **Returns:** `{"download_dir": "/path/to/downloads"}`
 
 #### `GET /play-file/{file_name}`
+
 - **Purpose:** Stream audio file for playback
 - **Path Parameters:**
   - `file_name` (str): File name in download directory
@@ -387,6 +418,7 @@ __init__(self, library_service, data_path: str)
   - 404: File not found
 
 #### `POST /show-in-explorer`
+
 - **Purpose:** Open file location in system file explorer
 - **Request Body:** ShowInExplorerRequest
   ```json
@@ -398,6 +430,7 @@ __init__(self, library_service, data_path: str)
 - **Platforms:** Windows (explorer), macOS (Finder), Linux (default manager)
 
 #### `GET /sharing/status`
+
 - **Purpose:** Get sharing configuration and statistics
 - **Returns:**
   ```json
@@ -415,10 +448,12 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `POST /sharing/rescan`
+
 - **Purpose:** Manually trigger shared folder rescan
 - **Returns:** `{"message": "Share rescan initiated via slskd"}`
 
 #### `GET /connection/status`
+
 - **Purpose:** Get detailed connection status
 - **Returns:**
   ```json
@@ -433,6 +468,7 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `POST /romanize`
+
 - **Purpose:** Romanize text (convert non-Latin characters)
 - **Request Body:** RomanizeRequest
   ```json
@@ -448,6 +484,7 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `GET /cover/{image_path}`
+
 - **Purpose:** Serve cover image
 - **Path Parameters:**
   - `image_path` (str): Path relative to covers directory
@@ -457,6 +494,7 @@ __init__(self, library_service, data_path: str)
   - 404: Image not found
 
 #### `GET /config`
+
 - **Purpose:** Get application configuration
 - **Returns:**
   ```json
@@ -466,6 +504,7 @@ __init__(self, library_service, data_path: str)
   ```
 
 #### `POST /config`
+
 - **Purpose:** Update application configuration
 - **Request Body:** ConfigRequest
   ```json
@@ -486,26 +525,31 @@ __init__(self, library_service, data_path: str)
 ### Key Methods
 
 #### `get_all_songs() -> List[Dict]`
+
 - **Returns:** All songs in database
 - **Song Dictionary Keys:** 'path', 'title', 'artist', 'album', 'duration', 'metadata', etc.
 
 #### `add_or_update_song(song_data: Dict)`
+
 - **Purpose:** Add or update a song in the library
 - **Parameters:**
   - `song_data`: Dictionary with song information
 - **Updates by:** Song path (unique key)
 
 #### `remove_song(file_path: str)`
+
 - **Purpose:** Remove song from library
 - **Parameters:**
   - `file_path`: Path of song to remove
 
 #### `get_lyrics(file_path: str) -> Dict`
+
 - **Purpose:** Get cached lyrics for a song
 - **Parameters:**
   - `file_path`: Path of song
 
 #### `upsert_lyrics(lyrics_data: Dict, file_path: str)`
+
 - **Purpose:** Update or insert lyrics
 - **Parameters:**
   - `lyrics_data`: Lyrics dictionary
@@ -520,6 +564,7 @@ __init__(self, library_service, data_path: str)
 ### search_models.py
 
 #### `SearchQuery`
+
 ```python
 {
     "artist": str,      # Optional artist name
@@ -529,6 +574,7 @@ __init__(self, library_service, data_path: str)
 ```
 
 #### `SearchResult`
+
 ```python
 {
     "path": str,            # File path on user's system
@@ -544,6 +590,7 @@ __init__(self, library_service, data_path: str)
 ### download_models.py
 
 #### `DownloadRequest`
+
 ```python
 {
     "username": str,
@@ -554,6 +601,7 @@ __init__(self, library_service, data_path: str)
 ```
 
 #### `DownloadStatus`
+
 ```python
 {
     "status": str,                  # 'Queued', 'Downloading', 'Finished', etc.
@@ -567,6 +615,7 @@ __init__(self, library_service, data_path: str)
 ```
 
 #### `DownloadsAndStatusResponse`
+
 ```python
 {
     "downloads": List[DownloadStatus],
@@ -577,6 +626,7 @@ __init__(self, library_service, data_path: str)
 ### system_models.py
 
 #### `SystemStatus`
+
 ```python
 {
     "backend_status": str,          # 'Online', 'Offline'
@@ -592,6 +642,7 @@ __init__(self, library_service, data_path: str)
 ## Quick Reference: Method Call Flow
 
 ### Search Flow
+
 1. Frontend calls `POST /search/soulseek` with artist/song
 2. Route calls `slskd_manager.perform_search()`
 3. Returns search token
@@ -600,6 +651,7 @@ __init__(self, library_service, data_path: str)
 6. Background thread updates results via `_poll_search_results()`
 
 ### Download Flow
+
 1. Frontend calls `POST /download` with username + file_path
 2. Route calls `slskd_manager.download_file()`
 3. Returns download ID
@@ -608,6 +660,7 @@ __init__(self, library_service, data_path: str)
 6. Status accumulated in `slskd_manager.download_status[download_id]`
 
 ### Startup Flow
+
 1. `main.py` instantiates SlskcManager
 2. Calls `slskd_manager.initialize_slskd()`
 3. Authenticates via `_login_to_slskd()`
